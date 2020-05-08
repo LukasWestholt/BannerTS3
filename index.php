@@ -175,7 +175,7 @@ foreach ($srv['clientsdb'] as $clientdb) {
 	}
 }
 	
-$ping = strval(floatval($srv['server']['virtualserver_total_ping']));
+$ping = strval(floatval($srv['server']['virtualserver_total_ping'])); // this is the overall connection ping of the server, not of the client
 
 if ($config['lang'] == 'PL') $month = array(1 => 'stycznia', 'lutego', 'marca', 'kwietnia', 'maja', 'czerwca', 'lipca', 'sierpnia', 'wrzesnia', 'pazdziernika', 'listopada', 'grudnia');
 if ($config['lang'] == 'EN') $month = array(1 => 'january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december');
