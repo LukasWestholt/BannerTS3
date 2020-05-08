@@ -1,5 +1,4 @@
 <?php
-require_once __DIR__ . "/class/ts3admin.class.php";
 require_once __DIR__ . "/config.php";
 $files = array_diff(scandir('cache'), array(
     '..',
@@ -8,6 +7,10 @@ $files = array_diff(scandir('cache'), array(
     'thumbs'
 ));
 $ip = getenv('HTTP_CLIENT_IP') ?: getenv('HTTP_X_FORWARDED_FOR') ?: getenv('HTTP_X_FORWARDED') ?: getenv('HTTP_FORWARDED_FOR') ?: getenv('HTTP_FORWARDED') ?: getenv('REMOTE_ADDR');
+$host = gethostname();
+$ip2 = gethostbyname($host);
+echo $ip2 . PHP_EOL;
+echo $ip . PHP_EOL;
 if ($ip == $_SERVER['SERVER_ADDR']) {
 	if (!empty($config['cache_name']) or $config['cache_name'] != '') {
 		if (!in_array($config['cache_name'], $files)) {
