@@ -1,5 +1,6 @@
 <?php
-//$ipinfo_token = ''; //https://ipinfo.io/account
+//require_once __DIR__ . "/config.php";
+//$ipinfo_token = $config['ipinfo_token'];
 
 echo getenv('HTTP_CLIENT_IP');
 echo "<br>";
