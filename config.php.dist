@@ -133,6 +133,4 @@ $img[] = array (
 	'text' => 'Ping: [ping]',
 	'font' => '/fonts/Ubuntu-l.ttf',
 	'color' => '#fff',
-); 
-
-?>
+);
