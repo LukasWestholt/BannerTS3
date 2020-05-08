@@ -48,7 +48,7 @@ if ($config['settings'] == 'auto') {
 				}
 			} else {
 			$srv = '';
-				if (!file_exists('cache/'.$config['cache_name']) || filemtime('cache/'.$config['cache_name']) + 30 < time()) {;
+				if (!file_exists('cache/'.$config['cache_name']) || filemtime('cache/'.$config['cache_name']) + 30 < time()) {
 					$query = new ts3admin($config['ts3']['host'], $config['ts3']['query_port'], 2);
 					$query->connect();
 					$query->login($config['ts3']['login'],$config['ts3']['password']);
@@ -242,15 +242,11 @@ function onImage($img, $x, $y, $text, $font, $fontsize, $color) {
 		$x = getRight_Bottom($x, imagesx($img), $width);
 	} else if (startsWith($x, "center")) {
 		$x = getCenter($x, imagesx($img), $width);
-	} else {
-		//$x -= $width / 2;
 	}
     if (startsWith($y, "bottom")) {
 		$y = getRight_Bottom($y, imagesy($img), $height);
 	} else if (startsWith($y, "center")) {
 		$y = getCenter($y, imagesy($img), $height);
-	} else {
-		//$y += $height / 2;
 	}
 	
 	$hex = str_replace("#", "", $color);

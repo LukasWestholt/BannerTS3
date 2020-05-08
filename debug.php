@@ -21,7 +21,7 @@ if ($config['settings'] == 'auto') {
 				}
 			} else {
 			$srv = '';
-				if (!file_exists('cache/'.$config['cache_name']) || filemtime('cache/'.$config['cache_name']) + 1 * 30 < time()) {;
+				if (!file_exists('cache/'.$config['cache_name']) || filemtime('cache/'.$config['cache_name']) + 1 * 30 < time()) {
 					$query = new ts3admin($config['ts3']['host'], $config['ts3']['query_port'], 2);
 					$query->connect();
 					$query->login($config['ts3']['login'],$config['ts3']['password']);
@@ -52,7 +52,7 @@ if ($weather['status']) {
 	//$json = file_get_contents('https://api.xman8830.ovh/weather?key='.$config['apikey'].'&ip=' . $ip);
 	//$data = json_decode($json, true);
 	//$weathericonfile = 'weathericon/' . $data['icon'] . '.png';
-}
+
 	foreach ($srv['clients'] as $client) {
 		$groups = explode(',', $client['client_servergroups']);
 		echo $groups;
@@ -65,3 +65,4 @@ if ($weather['status']) {
 			}
 		}
 	}
+}

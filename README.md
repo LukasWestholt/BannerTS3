@@ -21,7 +21,7 @@
 - Weather system
 
 #### Changelog in v 1.4
-- I have rewritten all of the code. Big update. New features. Better Apis.
+- I have rewritten the whole code. Big update. New features. Better Apis.
 
 #### Changelog in v 1.3
 - add Option screen bot refresh or refresh web

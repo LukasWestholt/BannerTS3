@@ -58,4 +58,3 @@ if ($ip == $_SERVER['SERVER_ADDR']) {
 } else {
 	echo 'You are not a machine!';
 }
-?>
