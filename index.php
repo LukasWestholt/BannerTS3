@@ -1,5 +1,11 @@
 <?php
 require_once __DIR__ . "/config.php";
+require_once __DIR__ . "/picture_template.php";
+
+# TODO: catch if there is no config.php
+# TODO: check for file rights
+# TODO: alert
+# TODO: ipdata timeout? date?
 
 function startsWith($haystack, $needle) {
 	if (!is_string($haystack)) {return False;}
@@ -30,55 +36,74 @@ $adminonline = 0;
 $my_user = [];
 $my_user["nick"] = $config['img']['found_nick'];
 $ping = "";
+
+if ($config['cache_name'] == '') {
+    alert('your config file is wrong, look at $config[\'cache_name\']');
+    exit;
+}
+
+if ($config['banner']['format'] == 'png') {
+    $image = imagecreatefrompng($config['banner']['background']);
+} elseif ($config['banner']['format'] == 'jpg') {
+    $image = imagecreatefromjpeg($config['banner']['background']);
+} else {
+    alert('your config file is wrong, look at: $config[\'banner\'][\'format\']');
+    exit;
+}
+
 if ($config['settings'] == 'auto') {
 	require_once __DIR__ . "/class/ts3admin.class.php";
+	# TODO better check for file
 	$files = array_diff(scandir('cache'), array('..', '.', 'fulls', 'thumbs'));
-		if (!empty($config['cache_name']) or $config['cache_name'] != '') {
-			if (!in_array($config['cache_name'] ,$files)) {
-				if(touch('./cache/'.$config['cache_name'])) {
-				if(chmod('./cache/'.$config['cache_name'], 0777)) {
-					$cache = 'success';
-				} else {
-					alert ('The folder and the cache file were created, no access rights were granted');
-					exit;
-				}
-				} else {
-					alert ('Not created <b>cache</b>');
-					exit;
-				}
-			} else {
-			$srv = '';
-				if (!file_exists('cache/'.$config['cache_name']) || filemtime('cache/'.$config['cache_name']) + 30 < time()) {
-					$query = new ts3admin($config['ts3']['host'], $config['ts3']['query_port'], 2);
-					$query->connect();
-					$query->login($config['ts3']['login'],$config['ts3']['password']);
-					$query->selectServer($config['ts3']['login_port']);
-					$query->setName('loading-server-banner-service');
-					$srv = [];
-					$srv['server'] = $query->getElement('data', $query->serverInfo());
-					$srv['groups'] = $query->getElement('data', $query->serverGroupList());
-					$srv['clients'] = $query->getElement('data', $query->clientList('-uid -away -voice -times -groups -info -icon -country -ip'));
-					$srv['clientsdb'] = $query->getElement('data', $query->clientDbList());
-					$srv['channel'] = $query->getElement('data', $query->channelList());
-					$srv['banlist'] = $query->getElement('data', $query->banList());
-					//$query->sendMessage("3",<id>, <text>);  Debug
-					$query->logout();
+    if (!in_array($config['cache_name'] ,$files)) {
+        # TODO better creation of file
+        if (touch('./cache/'.$config['cache_name'])) {
+            if(!chmod('./cache/'.$config['cache_name'], 0777)) {
+                alert('The folder and the cache file were created, no access rights were granted');
+                exit;
+            }
+        } else {
+            alert('Not created <b>cache</b>, please check the directory permission of writing new files');
+            exit;
+        }
+    }
+    if (!file_exists('cache/'.$config['cache_name']) || filemtime('cache/'.$config['cache_name']) + 30 < time()) {
+        $query = new ts3admin($config['ts3']['host'], $config['ts3']['query_port'], 2); // maybe you need to increase the timeout
+        $query->connect();
+        $query->login($config['ts3']['login'],$config['ts3']['password']);
+        $query->selectServer($config['ts3']['login_port']);
+        $query->setName('loading-server-banner-service');
+        $srv = [];
+        $srv['server'] = $query->getElement('data', $query->serverInfo());
+        $srv['groups'] = $query->getElement('data', $query->serverGroupList());
+        $srv['clients'] = $query->getElement('data', $query->clientList('-uid -away -voice -times -groups -info -icon -country -ip'));
+        $srv['clientsdb'] = $query->getElement('data', $query->clientDbList());
+        $srv['channel'] = $query->getElement('data', $query->channelList());
+        $srv['banlist'] = $query->getElement('data', $query->banList());
+        //$query->sendMessage("3",<id>, <text>);  Debug
+        $query->logout();
 
-					@file_put_contents('cache/'.$config['cache_name'], json_encode($srv));
-				} else {
-					$srv = file_get_contents('cache/'.$config['cache_name']);
-					$srv = json_decode($srv, true);
-				}
-			}
-		} else {
-			alert ('cache name not found in config.php');
-			exit;
-		}
+        @file_put_contents('cache/'.$config['cache_name'], json_encode($srv));
+    } else {
+        // i can use the cached version
+        $srv = file_get_contents('cache/'.$config['cache_name']);
+        $srv = json_decode($srv, true);
+    }
 } elseif ($config['settings'] == 'bot') {
 	$ts3 = file_get_contents('cache/'.$config['cache_name']);
-	$srv = json_decode($ts3, true);	
+	$srv = json_decode($ts3, true);
+} else {
+    alert('your config file is wrong, look at: $config[\'settings\']');
+    exit;
 }
-if ($weather['status']) {	
+# TODO: better knowing of disconnect
+if ($srv['server'] == "") {
+    $no_ts3_features = true;
+} else {
+    $no_ts3_features = false;
+}
+
+if ($weather['status']) {
 	$raw_ipdata = file_get_contents("cache/ipdata");
 	if (!$raw_ipdata) {$ipdata = [];} else {$ipdata = json_decode($raw_ipdata, True);}
 	foreach($ipdata as $item) {
@@ -89,29 +114,32 @@ if ($weather['status']) {
 	}
 	
 	if (!$client_city) {
-		$ch = curl_init("https://ipinfo.io/".rawurlencode($ip)."/city?token=".rawurlencode($config['ipinfo_token']));
-		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-		curl_setopt($ch, CURLOPT_HEADER, 0);
-		curl_setopt($ch, CURLOPT_FAILONERROR, true);
-		$output = curl_exec($ch);
-		$error = false;
-		if ($output === false) {
-			// "CURL Error: " . curl_error($ch);
-			$error = true;
-		}
+	    if ($config['ipinfo_token']) {
+            $ch = curl_init("https://ipinfo.io/" . rawurlencode($ip) . "/city?token=" . rawurlencode($config['ipinfo_token']));
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_HEADER, 0);
+            curl_setopt($ch, CURLOPT_FAILONERROR, true);
+            $output = curl_exec($ch);
+            $error = false;
+            if ($output === false) {
+                // "CURL Error: " . curl_error($ch);
+                $error = true;
+            }
 
-		$responseCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-		/*
-		 * 4xx status codes are client errors
-		 * 5xx status codes are server errors
-		 * 429 status code rate limits exceed
-		 */
-		if ($responseCode >= 400) {
-			// "HTTP Error: " . $responseCode;
-			$error = true;
-		}
-		curl_close($ch);
-		
+            $responseCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            /*
+             * 4xx status codes are client errors
+             * 5xx status codes are server errors
+             * 429 status code rate limits exceed
+             */
+            if ($responseCode >= 400) {
+                // "HTTP Error: " . $responseCode;
+                $error = true;
+            }
+            curl_close($ch);
+        } else {
+	        $error = true;
+        }
 		if (!$error) {
 			$client_city = trim($output);
 		} else {
@@ -133,25 +161,30 @@ if ($weather['status']) {
 			file_put_contents("cache/ipdata",json_encode($ipdata));
 		}
 	}
-	
-	$json = file_get_contents('https://api.openweathermap.org/data/2.5/weather?q=' .rawurlencode($client_city) .'&appid=' . rawurlencode($config['apikey_openweathermap']) . '&units=metric&lang=' . $config['lang']);
-	// language support: https://openweathermap.org/current#multi
-	$data = json_decode($json, true);
-	$weathericon = $data['weather'][0]['icon'];
-	$weathericonurl = 'https://openweathermap.org/img/wn/' . $weathericon . '@2x.png';
-	$weathericonfile = 'cache/weathericons/' . $weathericon . '.png';
 
-	if (!file_exists($weathericonfile)) {
-		$ch = curl_init($weathericonurl);
-		curl_setopt($ch, CURLOPT_HEADER, 0);
-		curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-		curl_setopt($ch, CURLOPT_BINARYTRANSFER,1);
-		$rawdata = curl_exec($ch);
-		curl_close($ch);
-		$fp = fopen($weathericonfile, 'x');
-		fwrite($fp, $rawdata);
-		fclose($fp);
-	}
+    $weathericonfile = "";
+	if ($config['apikey_openweathermap']) {
+        $json = file_get_contents('https://api.openweathermap.org/data/2.5/weather?q=' . rawurlencode($client_city) . '&appid=' . rawurlencode($config['apikey_openweathermap']) . '&units=metric&lang=' . $config['lang']);
+        // language support: https://openweathermap.org/current#multi
+        $data = json_decode($json, true);
+        $weathericon = $data['weather'][0]['icon'];
+        if ($weathericon) {
+            $weathericonurl = 'https://openweathermap.org/img/wn/' . $weathericon . '@2x.png';
+            $weathericonfile = 'cache/weathericons/' . $weathericon . '.png';
+
+            if (!file_exists($weathericonfile)) {
+                $ch = curl_init($weathericonurl);
+                curl_setopt($ch, CURLOPT_HEADER, 0);
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+                curl_setopt($ch, CURLOPT_BINARYTRANSFER, 1);
+                $rawdata = curl_exec($ch);
+                curl_close($ch);
+                $fp = fopen($weathericonfile, 'x');
+                fwrite($fp, $rawdata);
+                fclose($fp);
+            }
+        }
+    }
 }
 
 foreach ($srv['clients'] as $client) {
@@ -177,53 +210,59 @@ foreach ($srv['clientsdb'] as $clientdb) {
 	
 $ping = strval(floatval($srv['server']['virtualserver_total_ping'])); // this is the overall connection ping of the server, not of the client
 
-if ($config['lang'] == 'PL') $month = array(1 => 'stycznia', 'lutego', 'marca', 'kwietnia', 'maja', 'czerwca', 'lipca', 'sierpnia', 'wrzesnia', 'pazdziernika', 'listopada', 'grudnia');
-if ($config['lang'] == 'EN') $month = array(1 => 'january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december');
-if ($config['lang'] == 'DE') $month = array(1 => 'Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember');
-if ($config['lang'] != 'EN' and $config['lang'] != 'PL'and $config['lang'] != 'DE') $month = array(1 => 'january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december');
-$day = array('01' => '1','02' => '2','03' => '3','04' => '4','05' => '5','06' => '6','07' => '7','08' => '8','09' => '9','10' => '10','11' => '11','12' => '12','13' => '13','14' => '14','15' => '15','16' => '16','17' => '17','18' => '18','19' => '19','20' => '20','21' => '21','22' => '22','23' => '23','24' => '24','25' => '25','26' => '26','27' => '27','28' => '28','29' => '29','30' => '30','31' => '31');
-
-if ($config['banner']['format'] == 'png') {
-    $image = imagecreatefrompng($config['banner']['background']);
-} elseif ($config['banner']['format'] == 'jpg') {
-    $image = imagecreatefromjpeg($config['banner']['background']);
+// you can add here a language
+# TODO: find a better way
+//setlocale(LC_TIME, "fi");
+//echo utf8_encode(strftime('%A'));
+if ($config['lang'] == 'pl') {
+    $month = array(1 => 'stycznia', 'lutego', 'marca', 'kwietnia', 'maja', 'czerwca', 'lipca', 'sierpnia', 'wrzesnia', 'pazdziernika', 'listopada', 'grudnia');
+} elseif ($config['lang'] == 'en') {
+    $month = array(1 => 'january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december');
+} elseif ($config['lang'] == 'de') {
+    $month = array(1 => 'Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember');
+} else {
+    $month = array(1 => 'january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december');
 }
 
 foreach ($img as $item) {
-    $text    = $item['text'];
-	$replace = array(
-		1 => array(1 => '[adminsOnline]', 2 => $adminonline),
-		2 => array(1 => '[nick]', 2 => $my_user["nick"]),
-		3 => array(1 => '[channel]', 2 => $srv['server']['virtualserver_channelsonline']),
-		//4 => array(1 => '[visit]', 2 => $srv['server']['virtualserver_client_connections']),
-		4 => array(1 => '[visit]', 2 => $my_user['client_totalconnections']),
-		5 => array(1 => '[max]', 2 => $srv['server']['virtualserver_maxclients']),
-		6 => array(1 => '[online]', 2 => $srv['server']['virtualserver_clientsonline'] - $srv['server']['virtualserver_queryclientsonline']),
-		7 => array(1 => '[ping]', 2 => $ping),
-		8 => array(1 => '[time]', 2 => date('H:i')),
-		9 => array(1 => '[date]', 2 => $day[date('d')].'. '.$month[date('n')]),
-		10 => array(1 => '[uptime]', 2 => floor($srv['server']['virtualserver_uptime'] / 86400)),
-	);
-    if (!empty($data['name'])) {
-        if ($weather['icon']['status']) {
-            $weathericon_image = imagecreatefrompng($weathericonfile);
-            imagecopy($image, $weathericon_image, $weather['icon']['x'], $weather['icon']['y'], 0, 0, 80, 80);
-        }
-        if ($weather['city']['status']) {
-            onImage($image, $weather['city']['x'], $weather['city']['y'], $data['name'], $weather['city']['font'], $weather['city']['size'], $weather['city']['color']);
-        }
-        if ($weather['temp']['status']) {
-            onImage($image, $weather['temp']['x'], $weather['temp']['y'], round((float) $data['main']['temp'], 1) . '°C', $weather['temp']['font'], $weather['temp']['size'], $weather['temp']['color']);
-        }
-        if ($weather['description']['status']) {
-            onImage($image, $weather['description']['x'], $weather['description']['y'], $data['weather'][0]['description'], $weather['description']['font'], $weather['description']['size'], $weather['description']['color']);
-        }
-    }
+    if ($item['needs_teamspeak_server_connection'] and $no_ts3_features) continue;
+    $text = ($item[$config['lang']]) ? $item[$config['lang']] : $item['en'];
+    $replace = array(
+        1 => array(1 => '[adminsOnline]', 2 => $adminonline),
+        2 => array(1 => '[nick]', 2 => $my_user["nick"]),
+        3 => array(1 => '[channel]', 2 => $srv['server']['virtualserver_channelsonline']),
+        //4 => array(1 => '[visit]', 2 => $srv['server']['virtualserver_client_connections']),
+        4 => array(1 => '[visit]', 2 => $my_user['client_totalconnections']),
+        5 => array(1 => '[max]', 2 => $srv['server']['virtualserver_maxclients']),
+        6 => array(1 => '[online]', 2 => $srv['server']['virtualserver_clientsonline'] - $srv['server']['virtualserver_queryclientsonline']),
+        7 => array(1 => '[ping]', 2 => $ping),
+        8 => array(1 => '[time]', 2 => date('H:i')),
+        9 => array(1 => '[date]', 2 => date('j') . '. ' . $month[date('n')]),
+        10 => array(1 => '[uptime]', 2 => floor($srv['server']['virtualserver_uptime'] / 86400)),
+    );
+
     foreach ($replace as $new) {
         $text = str_replace($new[1], $new[2], $text);
     }
     onImage($image, $item['x'], $item['y'], $text, $item['font'], $item['size'], $item['color']);
 }
+
+if (($data['name']) != "") {
+    if ($weather['icon']['status']) {
+        $weathericon_image = imagecreatefrompng($weathericonfile);
+        imagecopy($image, $weathericon_image, $weather['icon']['x'], $weather['icon']['y'], 0, 0, 80, 80);
+    }
+    if ($weather['city']['status']) {
+        onImage($image, $weather['city']['x'], $weather['city']['y'], $data['name'], $weather['city']['font'], $weather['city']['size'], $weather['city']['color']);
+    }
+    if ($weather['temp']['status']) {
+        onImage($image, $weather['temp']['x'], $weather['temp']['y'], round((float) $data['main']['temp'], 1) . '°C', $weather['temp']['font'], $weather['temp']['size'], $weather['temp']['color']);
+    }
+    if ($weather['description']['status']) {
+        onImage($image, $weather['description']['x'], $weather['description']['y'], $data['weather'][0]['description'], $weather['description']['font'], $weather['description']['size'], $weather['description']['color']);
+    }
+}
+
 if ($config['banner']['format'] == 'png') {
     header('Content-Type: image/png');
     imagepng($image);
