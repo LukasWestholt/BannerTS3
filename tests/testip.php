@@ -1,5 +1,5 @@
 <?php
-//require_once __DIR__ . "/config.php";
+//require_once __DIR__ . "/../config.php";
 //$ipinfo_token = $config['ipinfo_token'];
 
 echo getenv('HTTP_CLIENT_IP');

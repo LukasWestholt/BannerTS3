@@ -3,21 +3,22 @@ require_once __DIR__ . "/config.php";
 require_once __DIR__ . "/picture_template.php";
 
 # TODO: catch if there is no config.php
-# TODO: check for file rights
-# TODO: lukas/th3kill3r2 username change to banner
-# TODO: update to newest ts3admin
-# TODO: execute check_cache_file_perms on 'server' and 'ipdata' and 'weathericons'?
-# TODO: function helper
+# TODO: execute check_cache_file_write_perms on 'server' and 'ipdata' and 'weathericons'?
 # TODO: check if ipdata timeout works correctly in a week
 # TODO: core.php run
+# TODO: debug function
+# TODO: round displayed time
+# TODO: exclude config tester
+# TODO: display ping=0 when user=0?
+
 
 /**
  *
  * echo an alert
- * optionally exit the script
+ * exit the script
  *
  * @param mixed $msg
- * @param bool $exit
+ * @param bool $exit Default: true [optional]
  */
 function alert($msg, $exit = true) {
     if (is_bool($msg)) $msg = $msg ? 'true' : 'false';
@@ -27,55 +28,61 @@ function alert($msg, $exit = true) {
 }
 
 /**
- * @param string $haystack
- * @param string $needle
- * @return bool
+ *
+ * Check if the string A starts with string B
+ * if a is not a string return false
+ *
+ * @param mixed $a String A
+ * @param string $b String B
+ * @return bool Does the string A starts with string B
  */
-function startsWith($haystack, $needle) {
-	if (!is_string($haystack)) {return False;}
-     $length = strlen($needle);
-     return (substr($haystack, 0, $length) === $needle);
+function startsWith($a, $b) {
+	if (!is_string($a)) {return False;}
+     $length = strlen($b);
+     return (substr($a, 0, $length) === $b);
 }
 
 /**
- * @param $xy
- * @param $img_length
- * @param $length
- * @return float|int
+ * @param string $xy
+ * @param int $img_length
+ * @param int $length
+ * @return int
  */
 function getCenter($xy, $img_length, $length) {
 	if (count(explode(";",$xy)) > 1) {
-		return abs($img_length/2 - $length/2 + intval(explode(";",$xy)[1])); 
+		return intval(abs($img_length/2 - $length/2 + intval(explode(";",$xy)[1])));
 	} else {
-		return abs($img_length/2 - $length/2);
+		return intval(abs($img_length/2 - $length/2));
 	}
 }
 
 /**
- * @param $xy
- * @param $img_length
- * @param $length
- * @return float|int
+ * @param string $xy
+ * @param int $img_length
+ * @param int $length
+ * @return int
  */
 function getRight_Bottom($xy, $img_length, $length) {
 	if (count(explode(";",$xy)) > 1) {
-		return abs($img_length - $length + intval(explode(";",$xy)[1])); 
+		return intval(abs($img_length - $length + intval(explode(";",$xy)[1])));
 	} else {
-		return abs($img_length - $length);
+		return intval(abs($img_length - $length));
 	}
 }
 
 /**
- * @param $img
- * @param $x
- * @param $y
- * @param $text
- * @param $font
- * @param $fontsize
- * @param $color
+ * @param resource $img Image
+ * @param int|string $x
+ * @param int|string $y
+ * @param string $text
+ * @param string $font
+ * @param int $fontsize
+ * @param string $color
  */
 function onImage($img, $x, $y, $text, $font, $fontsize, $color) {
     $fontfile = __DIR__ . $font;
+    if (!is_readable($fontfile)) alert("The font file does not exist or you don't have read permission on it");
+    # TODO what is the name of the font file?
     $box      = imageTTFBbox($fontsize, 0, $fontfile, $text);
     $width    = abs($box[4] - $box[0]);
     $height   = abs($box[5] - $box[1]);
@@ -104,21 +111,23 @@ function onImage($img, $x, $y, $text, $font, $fontsize, $color) {
 }
 
 /**
- * @param string $path
- * @return bool
+ *
+ * This function will alert() if the file is not writable to creatable
+ *
+ * @param string $path file path
+ * @return bool need_new_file
  */
-function check_cache_file_perms($path) {
+function check_cache_file_write_perms($path) {
     if (!is_writable($path)) {
-        if (file_exists($path) and !chmod($path, 0777)) {
-            alert('The cache file exists, but you have to set the file permission of writing manually');
-        }
+        if (file_exists($path) and !chmod($path, 0777)) alert('The cache file exists, but you have to set the file permission of writing manually');
         if (!file_exists($path)) {
             //if (!touch($path)) {
             if (!is_writable(dirname($path))) {
                 alert('PHP is not able to create your cache file, please set the directory permission so PHP is able to write new files [0777 rwxrwxrwx]');
+                # TODO what is the name of the directory?
             } else {
                 // file can get created
-                //check_cache_file_perms($path);
+                //check_cache_file_write_perms($path);
                 return true;
             }
         }
@@ -127,12 +136,16 @@ function check_cache_file_perms($path) {
 }
 
 /**
+ *
+ * Executes a curl request
+ * returns curl data in array
+ *
  * @param string $url
- * @param bool $FAILONERROR
- * @param bool $BINARYTRANSFER
- * @param bool $CONNECTTIMEOUT
- * @param int $TO
- * @return array
+ * @param bool $FAILONERROR Default: false [optional]
+ * @param bool $BINARYTRANSFER Default: false [optional]
+ * @param bool $CONNECTTIMEOUT Default: false [optional]
+ * @param int $TO Default: 5 [optional]
+ * @return array answer of curl
  */
 function curl_get_data($url, $FAILONERROR = false, $BINARYTRANSFER = false, $CONNECTTIMEOUT = false, $TO = 5) {
     $ch = curl_init($url);
@@ -154,27 +167,22 @@ function curl_get_data($url, $FAILONERROR = false, $BINARYTRANSFER = false, $CON
  * @param string $password
  * @param int $login_port
  * @param string $nickname
- * @return array
+ * @return array TS-data
  */
 function get_TS3_data($host, $query_port, $timeout, $login, $password, $login_port, $nickname) {
     require_once __DIR__ . "/class/ts3admin.class.php";
     $srv = [];
-    $query = new ts3admin($host, $query_port, $timeout);
+    $query = new par0noid\ts3admin($host, $query_port, $timeout);
     $output = $query->connect();
     $srv = array_merge($srv, $output);
     if (!$srv['success']) return $srv;
     $output = $query->login($login,$password);
     $srv = array_merge($srv, $output);
     if (!$srv['success']) return $srv;
-    $output = $query->selectServer($login_port);
+    // edits to the new ts3admin version
+    $output = $query->selectServer($login_port, "port", false, $nickname);
     $srv = array_merge($srv, $output);
     if (!$srv['success']) return $srv;
-    $output = $query->getName();
-    if ($output and $nickname != $output) {
-        $output = $query->setName($nickname);
-        $srv = array_merge($srv, $output);
-        if (!$srv['success']) return $srv;
-    }
     $srv['server'] = $query->getElement('data', $query->serverInfo());
     $srv['groups'] = $query->getElement('data', $query->serverGroupList());
     $srv['clients'] = $query->getElement('data', $query->clientList('-uid -away -voice -times -groups -info -icon -country -ip'));
@@ -189,7 +197,7 @@ function get_TS3_data($host, $query_port, $timeout, $login, $password, $login_po
 /**
  * @param string $apikey
  * @param string $ip
- * @return bool|string
+ * @return false|string data if the request worked, else false
  */
 function ipinfo($apikey, $ip) {
     if (!$apikey or !$ip) return false;
@@ -211,15 +219,13 @@ function ipinfo($apikey, $ip) {
         //alert("HTTP Error: " . $responseCode);
         return false;
     }
-    if ($responseCode == 403) {
-        alert('Your apikey_ipinfo is invalid, look at: $config[\'apikey_ipinfo\'] in config.php');
-    }
+    if ($responseCode == 403) alert('Your apikey_ipinfo is invalid, look at: $config[\'apikey_ipinfo\'] in config.php');
     return trim($output);
 }
 
 /**
  * @param string $ip
- * @return bool|mixed
+ * @return false|string data if the request worked, else false
  */
 function ip_api($ip) {
     $json_string = file_get_contents('http://ip-api.com/json/'.rawurlencode($ip));
@@ -227,9 +233,20 @@ function ip_api($ip) {
     // file_get_contents is working here good, because ip-api.com always output http code 200
     // HTTP 429 on usage limits (45 req/min)
     if ($api_data and $api_data['status'] == 'success') {
-        return $api_data['city'];
+        return strval($api_data['city']);
     }
     return false;
+}
+
+/**
+ * @param string $language
+ * @return string name of month in specific language
+ */
+function get_translated_name_of_month($language) {
+    setlocale(LC_TIME, $language);
+    $month = utf8_encode(strftime('%B'));
+    setlocale(LC_TIME, "C");
+    return $month;
 }
 
 $ip = getenv('HTTP_CLIENT_IP') ?: getenv('HTTP_X_FORWARDED_FOR') ?: getenv('HTTP_X_FORWARDED') ?: getenv('HTTP_FORWARDED_FOR') ?: getenv('HTTP_FORWARDED') ?: getenv('REMOTE_ADDR');
@@ -242,14 +259,10 @@ $ping = "";
 
 ### CONFIG CHECK
 
-if (!$config['cache_name']) {
-    alert('your config file is wrong, look at $config[\'cache_name\'] in config.php');
-}
+if (!$config['cache_name']) alert('your config file is wrong, look at $config[\'cache_name\'] in config.php');
 $cache_file = './cache/'.$config['cache_name'];
 
-if (!file_exists($config['banner']['background'])) {
-    alert('background image path not found - your config file is wrong, look at: $config[\'banner\'][\'background\'] in config.php');
-}
+if (!file_exists($config['banner']['background'])) alert('background image path not found - your config file is wrong, look at: $config[\'banner\'][\'background\'] in config.php');
 
 if ($config['banner']['format'] == 'png') {
     $image = imagecreatefrompng($config['banner']['background']);
@@ -279,9 +292,13 @@ if (!is_array($config['ts3']['admingroups'])) {
     alert('your config file is wrong, look at: $config[\'ts3\'][\'admingroups\'] in config.php');
 }
 
+if (strlen($config['ts3']['nickname']) < 4) {
+    alert('your config file is wrong, you have to set a nickname with more than 3 characters, look at: $config[\'ts3\'][\'nickname\'] in config.php');
+}
+
 ### GET TS3 DATA
 
-$need_new_file = check_cache_file_perms($cache_file);
+$need_new_file = check_cache_file_write_perms($cache_file);
 //alert(($need_new_file ? 'true' : 'false'));
 if ($config['settings'] == 'auto' and ($need_new_file or filemtime($cache_file) + $config['ts3']['cachetime'] < time())) {
     $ts3 = get_TS3_data($config['ts3']['host'], $config['ts3']['query_port'], $config['ts3']['timeout'],
@@ -291,15 +308,14 @@ if ($config['settings'] == 'auto' and ($need_new_file or filemtime($cache_file) 
         // The @ operator tells PHP to suppress error messages, so that they will not be shown.
     } // else {alert($ts3['errors']);}
 } else {
-    if (!is_readable($cache_file)) {
-        alert("The cache file does not exist or you don't have read permission on it");
-    }
+    if (!is_readable($cache_file)) alert("The cache file does not exist or you don't have read permission on it");
     $ts3 = json_decode(file_get_contents($cache_file), true);
 }
 
 ### GET LOCATION AND WEATHER DATA
 
 if ($weather['status']) {
+    // Note: ipdata caching is not working when the access permission in missing.
 	$raw_ipdata = file_get_contents("cache/ipdata");
 	if (!$raw_ipdata) {$ipdata = [];} else {$ipdata = json_decode($raw_ipdata, True);}
     $city_data_source = "";
@@ -313,7 +329,6 @@ if ($weather['status']) {
                     $ipdata[$key]["source"] = "ipinfo";
                     $ipdata[$key]["unix-timestamp"] = time();
                     file_put_contents("cache/ipdata",json_encode($ipdata));
-                    // Note: Not working when the access permission in missing.
                 } elseif ($item["unix-timestamp"] + $config['ip_cachetime'] < time()) {
                     $output = ip_api($ip);
                     if ($output) {
@@ -321,7 +336,6 @@ if ($weather['status']) {
                         $ipdata[$key]["source"] = "ip-api";
                         $ipdata[$key]["unix-timestamp"] = time();
                         file_put_contents("cache/ipdata",json_encode($ipdata));
-                        // Note: Not working when the access permission in missing.
                     }
                 }
             }
@@ -357,7 +371,6 @@ if ($weather['status']) {
 
         array_push($ipdata, $new_ip);
         file_put_contents("cache/ipdata",json_encode($ipdata));
-        // Note: Not working when the access permission in missing.
     }
 
     $weathericonfile = "";
@@ -379,7 +392,7 @@ if ($weather['status']) {
 
                 if (!file_exists($weathericonfile)) {
                     $rawdata = curl_get_data($weathericonurl,  false, true)[0];
-                    check_cache_file_perms($weathericonfile);
+                    check_cache_file_write_perms($weathericonfile);
                     $fp = fopen($weathericonfile, 'x');
                     fwrite($fp, $rawdata);
                     fclose($fp);
@@ -448,6 +461,7 @@ foreach ($img as $item) {
         6 => array(1 => '[online]', 2 => $ts3['server']['virtualserver_clientsonline'] - $ts3['server']['virtualserver_queryclientsonline']),
         7 => array(1 => '[ping]', 2 => $ping),
         8 => array(1 => '[time]', 2 => date('H:i')),
+        //9 => array(1 => '[date]', 2 => date('j') . '. ' . get_translated_name_of_month($config['lang'])), # TODO
         9 => array(1 => '[date]', 2 => date('j') . '. ' . $month[date('n')]),
         10 => array(1 => '[uptime]', 2 => floor($ts3['server']['virtualserver_uptime'] / 86400)),
     );
@@ -460,7 +474,7 @@ foreach ($img as $item) {
 
 if (($weather_data['name']) != "") {
     if ($weather['icon']['status']) {
-        $weathericon_image = imagecreatefrompng($weathericonfile);
+        $weathericon_image = imagecreatefrompng($weathericonfile); // TODO: if $weathericonfile exists?
         imagecopy($image, $weathericon_image, $weather['icon']['x'], $weather['icon']['y'], 0, 0, 80, 80);
     }
     if ($weather['city']['status']) {
