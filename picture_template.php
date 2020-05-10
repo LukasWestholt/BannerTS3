@@ -53,7 +53,6 @@ $img[] = array (
     'pl' => 'Nick [nick]',
     'font' => '/fonts/Ubuntu-l.ttf',
     'color' => '#fff',
-    'needs_teamspeak_server_connection' => false,
 );
 
 $img[] = array (
@@ -75,7 +74,6 @@ $img[] = array (
     'en' => '[time]',
     'font' => '/fonts/Ubuntu-l.ttf',
     'color' => '#fff',
-    'needs_teamspeak_server_connection' => false,
 );
 
 $img[] = array (
@@ -85,7 +83,6 @@ $img[] = array (
     'en' => '[date]',
     'font' => '/fonts/Ubuntu-l.ttf',
     'color' => '#fff',
-    'needs_teamspeak_server_connection' => false,
 );
 
 
@@ -110,6 +107,7 @@ $img[] = array (
     'font' => '/fonts/Ubuntu-l.ttf',
     'color' => '#fff',
     'needs_teamspeak_server_connection' => true,
+    'needs_totally_found_ts_user_data' => true,
 );
 
 $img[] = array (

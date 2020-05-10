@@ -4198,6 +4198,19 @@ class ts3admin {
 	}
 
 /**
+ * setName
+ *
+ * Sets your nickname in server query
+ *
+ * @author     Lukas Westholt
+ * @return     boolean success
+ */
+	function getName() {
+		$this->loadQueryData();
+		return $this->runtime['bot_name'];
+	}
+
+/**
   * tokenAdd
   * 
   * Create a new token. If tokentype is set to 0, the ID specified with tokenid1 will be a server group ID. Otherwise, tokenid1 is used as a channel group ID and you need to provide a valid channel ID using tokenid2. The tokencustomset parameter allows you to specify a set of custom client properties. This feature can be used when generating tokens to combine a website account database with a TeamSpeak user. The syntax of the value needs to be escaped using the ServerQuery escape patterns and has to follow the general syntax of:

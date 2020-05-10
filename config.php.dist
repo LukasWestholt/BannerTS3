@@ -6,28 +6,35 @@
 #									   #
 #		Created by xman8830			   #
 #									   #
-########################################									
+########################################
 
 ########################################
 #									   #
 #   	Version by Lukas Westholt      #
 #									   #
-########################################	
-date_default_timezone_set('Europe/Berlin');//Time zone
+########################################
 $config = [];
-$config['cache_name'] = 'server'; //Name cache
-$config['ipinfo_token'] = ''; //https://ipinfo.io/account
+// put your values here in
+date_default_timezone_set('Europe/Berlin'); //time zone
+$config['apikey_ipinfo'] = ''; //https://ipinfo.io/account
 $config['apikey_openweathermap'] = ''; //https://openweathermap.org/api
-$config['ts3']['host'] = '';  //Host IP
+$config['ts3']['host'] = '';  //Host IP or 'localhost'
 $config['ts3']['login_port'] = '';  //Port Server
 $config['ts3']['query_port'] = ''; //Port Query
 $config['ts3']['login'] = ''; //Login Query
 $config['ts3']['password'] = '';  //Password Query
+$config['ts3']['timeout'] = 2;  //Timeout in seconds for TS3 connection, maybe you need to increase the timeout
+$config['ts3']['cachetime'] = 30;  //Time in seconds after which the ts3 cache should be reloaded.
+$config['ts3']['nickname'] = 'loading-server-banner-service'; //Nickname of the ts3 query
+$config['ts3']['admingroups'] = array(6); //id admins groups example: id:6
 
 $config['settings'] = 'auto'; // "auto" - refresh website or "bot" - screen bot refresh
+$config['lang'] = 'en'; //Language pl/en/de
 
-$config['banner']['format'] = 'png'; //Format png/jpg
-$config['banner']['background'] = 'img/banner.png'; //link to background png/jpg
-$admingroups = array(6); //id admins groups
-$config['img']['found_nick'] = 'unknown';// Nick if not found nick
-$config['lang'] = 'en';//Language pl/en/de
+$config['banner']['format'] = 'png'; //format png/jpg
+$config['banner']['background'] = 'img/banner.png'; //path to background png/jpg
+$config['img']['found_nick'] = 'unknown'; //Nick if not found nick
+
+$config['cache_name'] = 'server'; //Name of cache file
+$config['ip_cachetime'] = 604800; //Time in seconds: Renew ip-location-relationship Default: 1 Week
+$config['fallback_city'] = 'Berlin'; //Your displayed city when no one can be calculated
